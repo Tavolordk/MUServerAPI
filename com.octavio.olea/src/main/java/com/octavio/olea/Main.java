@@ -23,9 +23,27 @@ public class Main {
         module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer());
         objectMapper.registerModule(module);
 
-        MuServer server = MuServerBuilder.httpServer()
-                .addHandler(Method.POST, "/restaurant/reserve", (request, response, pathParams) -> reserveTable(request, response))
-                .addHandler(Method.GET, "/restaurant/reservations", (request, response, pathParams) -> getReservations(request, response))
+        MuServer server = MuServerBuilder.httpServer().withHttpPort(52254)
+                .addHandler(Method.POST, "/restaurant/reserve", (request, response, pathParams) -> {
+                    response.headers().add("Access-Control-Allow-Origin", "*");
+                    reserveTable(request, response);
+                })
+                .addHandler(Method.GET, "/restaurant/reservations", (request, response, pathParams) -> {
+                    response.headers().add("Access-Control-Allow-Origin", "*");
+                    getReservations(request, response);
+                })
+                .addHandler(Method.OPTIONS, "/restaurant/reserve", (request, response, pathParams) -> {
+                    response.headers().add("Access-Control-Allow-Origin", "*")
+                            .add("Access-Control-Allow-Methods", "POST")
+                            .add("Access-Control-Allow-Headers", "Content-Type");
+                    response.write("");
+                })
+                .addHandler(Method.OPTIONS, "/restaurant/reservations", (request, response, pathParams) -> {
+                    response.headers().add("Access-Control-Allow-Origin", "*")
+                            .add("Access-Control-Allow-Methods", "GET")
+                            .add("Access-Control-Allow-Headers", "Content-Type");
+                    response.write("");
+                })
                 .start();
         System.out.println("Server started at " + server.uri());
     }
@@ -48,6 +66,8 @@ public class Main {
         }
 
         response.status(Response.Status.CREATED.getStatusCode());
+        response.contentType(MediaType.APPLICATION_JSON);
+        response.write(objectMapper.writeValueAsString(reservation));
     }
 
     private static void getReservations(MuRequest request, MuResponse response) throws Exception {
